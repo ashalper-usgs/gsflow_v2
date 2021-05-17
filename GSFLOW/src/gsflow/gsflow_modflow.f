@@ -1,60 +1,6 @@
 !***********************************************************************
 !     GSFLOW module that replaces MF_NWT.f
 !***********************************************************************
-      MODULE GSFMODFLOW
-      USE PRMS_CONSTANTS, ONLY: DEBUG_minimum, DEBUG_less, ACTIVE, OFF,
-     +    MODFLOW, GSFLOW, ERROR_modflow, ERROR_time, MAXFILE_LENGTH,
-     +    READ_INIT
-      USE PRMS_MODULE, ONLY: Print_debug, Model, GSFLOW_flag
-      IMPLICIT NONE
-!   Local Variables
-      character(len=*), parameter :: MODDESC = 'GSFLOW MODFLOW main'
-      character(len=14), parameter :: MODNAME = 'gsflow_modflow'
-      character(len=*), parameter :: Version_gsflow_modflow='2021-02-18'
-      character(len=*), parameter :: MODDESC_UZF = 'UZF-NWT Package'
-      character(len=*), parameter :: MODDESC_SFR = 'SFR-NWT Package'
-      character(len=*), parameter :: MODDESC_LAK = 'LAK-NWT Package'
-      character(len=*), parameter :: MODNAME_UZF = 'gwf2uzf1_NWT'
-      character(len=*), parameter :: MODNAME_SFR = 'gwf2sfr7_NWT'
-      character(len=*), parameter :: MODNAME_LAK = 'gwf2lak7_NWT'
-      character(len=*), parameter :: Version_uzf = '2020-12-28'
-      character(len=*), parameter :: Version_sfr = '2020-09-30'
-      character(len=*), parameter :: Version_lak = '2020-09-30'
-      INTEGER, PARAMETER :: ITDIM = 80
-      INTEGER, SAVE :: Convfail_cnt, Steady_state, Ncells
-      INTEGER, SAVE :: IGRID, KKPER, ICNVG, NSOL, IOUTS,KPERSTART
-      INTEGER, SAVE :: AGCONVERGE
-      INTEGER, SAVE :: KSTP, KKSTP, IERR, Max_iters, Itreal
-      INTEGER, SAVE :: Mfiter_cnt(ITDIM), Iter_cnt(ITDIM), Iterations
-      INTEGER, SAVE :: Szcheck, Sziters, INUNIT, KPER, NCVGERR
-      INTEGER, SAVE :: Max_sziters, Maxgziter
-      INTEGER, SAVE, ALLOCATABLE :: Gwc_col(:), Gwc_row(:)
-      REAL, SAVE :: Delt_save
-      INTEGER, SAVE, ALLOCATABLE :: Stress_dates(:)
-      INTEGER, SAVE :: Modflow_skip_stress, Kkper_new, 
-     +                 Modflow_skip_time_step
-      REAL, SAVE :: Modflow_time_in_stress, Modflow_skip_time
-      DOUBLE PRECISION, SAVE :: Mft_to_sec, Totalarea_mf
-      DOUBLE PRECISION, SAVE :: Mfl2_to_acre, Mfl3_to_ft3, Sfr_conv
-      DOUBLE PRECISION, SAVE :: Acre_inches_to_mfl3, Mfl3t_to_cfs
-      REAL, SAVE :: Mft_to_days, Mfl_to_inch, Inch_to_mfl_t
-      DOUBLE PRECISION, SAVE :: mfstrt_jul  !RGN to get MF to stop at End_time for MODFLOW only
-      REAL, SAVE, ALLOCATABLE :: Mfq2inch_conv(:), Cellarea(:)
-      REAL, SAVE, ALLOCATABLE :: Gvr2cell_conv(:), Mfvol2inch_conv(:)
-      INTEGER, SAVE :: Stopcount
-C-------ASSIGN VERSION NUMBER AND DATE
-      CHARACTER*40 VERSION,VERSION2,VERSION3
-      CHARACTER*10 MFVNAM
-      PARAMETER (VERSION='1.2.0 03/01/2020')
-      PARAMETER (VERSION2='1.12.0 02/03/2017')
-      PARAMETER (VERSION3='1.04.0 09/15/2016')
-      PARAMETER (MFVNAM='-NWT-SWR1')
-      INTEGER, SAVE :: IBDT(8)
-!   Control Parameters
-      INTEGER, SAVE :: Modflow_time_zero(6)
-      CHARACTER(LEN=MAXFILE_LENGTH), SAVE :: Modflow_name
-      END MODULE GSFMODFLOW
-
 C     ******************************************************************
 C     MAIN CODE FOR U.S. GEOLOGICAL SURVEY MODULAR MODEL -- MODFLOW-NWT
 !rgn------REVISION NUMBER CHANGED TO BE CONSISTENT WITH NWT RELEASE
@@ -89,9 +35,13 @@ C
 !     ------------------------------------------------------------------
 !        SPECIFICATIONS:
 !     ------------------------------------------------------------------
+      USE PRMS_CONSTANTS, ONLY: DEBUG_minimum, DEBUG_less, ACTIVE
       USE GSFMODFLOW
-      USE PRMS_MODULE, ONLY: Nhrucell, Ngwcell
+      USE PRMS_MODULE, ONLY: Nhrucell, Ngwcell, Nhru, Print_debug,
+     &    GSFLOW_flag
       IMPLICIT NONE
+      ! Functions
+      EXTERNAL :: declvar_real
 !***********************************************************************
       gsfdecl = 0
 C
@@ -115,6 +65,11 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
         ALLOCATE ( Mfq2inch_conv(Nhrucell), Mfvol2inch_conv(Nhrucell) )
         ALLOCATE ( Gvr2cell_conv(Nhrucell), Cellarea(Ngwcell) )
         ALLOCATE ( Gwc_row(Ngwcell), Gwc_col(Ngwcell) )
+        ALLOCATE ( Hru_ag_irr(Nhru) )
+        CALL declvar_real(MODNAME, 'hru_ag_irr', 'nhru', Nhru,
+     &       'Irrigation added to soilzone from MODFLOW wells',
+     &       'inches', Hru_ag_irr)
+        Hru_ag_irr = 0.0
       ENDIF
 
       END FUNCTION gsfdecl
@@ -127,6 +82,8 @@ C2------WRITE BANNER TO SCREEN AND DEFINE CONSTANTS.
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
       USE GSFMODFLOW
+      USE PRMS_CONSTANTS, ONLY: MODFLOW, GSFLOW, ACTIVE, OFF,
+     &    DEBUG_minimum, DEBUG_less, ERROR_modflow, READ_INIT
       USE PRMS_MODULE, ONLY: Mxsziter, EQULS, Init_vars_from_file,
      &    Kper_mfo, Have_lakes, NLAKES_MF, Ag_package_active
 C1------USE package modules.
@@ -389,6 +346,8 @@ C7------SIMULATE EACH STRESS PERIOD.
       CALL print_module(MODDESC_SFR, MODNAME_SFR, Version_sfr)
       IF ( Have_lakes==ACTIVE )
      &     CALL print_module(MODDESC_LAK, MODNAME_LAK, Version_lak)
+      IF ( Ag_package_active==ACTIVE )
+     &     CALL print_module(MODDESC_AG, MODNAME_AG, Version_ag)
 
       IF ( IUNIT(63)>0 ) solver = 'NWT'
       IF ( IUNIT(13)>0 ) solver = 'PCG'
@@ -457,9 +416,10 @@ C
 !        SPECIFICATIONS:
 !     ------------------------------------------------------------------
       USE GSFMODFLOW
-      USE PRMS_MODULE, ONLY: Kper_mfo, Kkiter, Timestep,
-     &    Init_vars_from_file, Mxsziter, Glacier_flag,
-     &    PRMS_land_iteration_flag
+      USE PRMS_CONSTANTS, ONLY: DEBUG_less, MODFLOW, GSFLOW, ACTIVE,
+     &    OFF, ERROR_time
+      USE PRMS_MODULE, ONLY: Kper_mfo, Kkiter, Timestep, Process,
+     &    Init_vars_from_file, Mxsziter, PRMS_land_iteration_flag
       USE PRMS_SET_TIME, ONLY: Nowyear, Nowmonth, Nowday
 C1------USE package modules.
       USE GLOBAL
@@ -478,15 +438,13 @@ c     USE LMGMODULE
       INTEGER I
       INCLUDE 'openspec.inc'
 ! FUNCTIONS AND SUBROUTINES
-      INTEGER, EXTERNAL :: soilzone, GET_KPER
-      INTEGER, EXTERNAL :: srunoff, intcp, snowcomp, glacr
+      INTEGER, EXTERNAL :: soilzone, srunoff, GET_KPER
       INTEGER, EXTERNAL :: gsflow_prms2mf, gsflow_mf2prms, gsfclean
-      EXTERNAL :: READ_STRESS
+      EXTERNAL :: READ_STRESS, PRMS_land_modules
       INTRINSIC MIN
 ! Local Variables
       INTEGER :: retval, II, KITER, IBDRET, iss
-      INTEGER :: IC1, IC2, IR1, IR2, IL1, IL2, IDIR, iprt, gsflag
-      INTEGER :: ITREAL2
+      INTEGER :: IC1, IC2, IR1, IR2, IL1, IL2, IDIR, iprt
       REAL :: BUDPERC
 !***********************************************************************
       gsfrun = 0
@@ -653,24 +611,9 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
 
 !  Call the PRMS modules that need to be inside the iteration loop
             IF ( Szcheck==ACTIVE ) THEN
-              IF ( PRMS_land_iteration_flag==ACTIVE ) THEN
-                retval = intcp()
-                IF ( retval/=0 ) THEN
-                  PRINT 9001, 'intcp', retval
-                  RETURN
-                ENDIF
-                retval = snowcomp()
-                IF ( retval/=0 ) THEN
-                  PRINT 9001, 'snowcomp', retval
-                  RETURN
-                ENDIF
-                IF ( Glacier_flag==ACTIVE ) THEN
-                  retval = glacr()
-                  IF ( retval/=0 ) THEN
-                    PRINT 9001, 'glacr_melt', retval
-                    RETURN
-                  ENDIF
-                ENDIF
+              IF ( PRMS_land_iteration_flag==2 ) THEN
+                CALL PRMS_land_modules(Process, retval)
+              ELSEIF ( PRMS_land_iteration_flag==1 ) THEN
                 retval = srunoff()
                 IF ( retval/=0 ) THEN
                   PRINT 9001, 'srunoff', retval
@@ -694,8 +637,7 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
               IF ( KKITER==Mxsziter+1 ) Stopcount = Stopcount + 1
             ENDIF
             IF(IUNIT(66).GT.0 ) 
-     1      CALL GWF2AG7FM(Kkper, Kkstp, Kkiter,IUNIT(63),AGCONVERGE)
-
+     1         CALL GWF2AG7FM(Kkper, Kkstp, Kkiter,IUNIT(63),AGCONVERGE)
             IF(IUNIT(55).GT.0) CALL GWF2UZF1FM(KKPER,KKSTP,KKITER,
      1                           IUNIT(44),IUNIT(22),IUNIT(63),
      2                           IUNIT(64),IGRID)  !SWR - JDH ADDED IUNIT(64)
@@ -1026,8 +968,9 @@ C
 !        SPECIFICATIONS:
 !     ------------------------------------------------------------------
       USE GSFMODFLOW
-      USE PRMS_CONSTANTS, ONLY: SAVE_INIT
-      USE PRMS_MODULE, ONLY: Timestep, Save_vars_to_file
+      USE PRMS_CONSTANTS, ONLY: SAVE_INIT, ACTIVE, DEBUG_less, MODFLOW
+      USE PRMS_MODULE, ONLY: Timestep, Save_vars_to_file, GSFLOW_flag,
+     &    Print_debug, Model
       USE GLOBAL, ONLY: IOUT, IUNIT, NIUNIT
       USE GWFNWTMODULE, ONLY:LINMETH
       IMPLICIT NONE
@@ -1211,14 +1154,15 @@ C        CALL GETCL(COMLIN)
         ENDIF
 C
       RETURN
-      END
+      END SUBROUTINE GETNAMFIL
+C
       SUBROUTINE GLO1BAS6ET(IOUT,IBDT,IPRTIM)
 C     ******************************************************************
 C     Get end time and calculate elapsed time
 C     ******************************************************************
 C        SPECIFICATIONS:
 C     ------------------------------------------------------------------
-      INTRINSIC :: INT
+      INTRINSIC :: INT, NINT, MOD
       INTEGER IBDT(8), IEDT(8), IDPM(12)
       DATA IDPM/31,28,31,30,31,30,31,31,30,31,30,31/ ! Days per month
       DATA NSPD/86400/  ! Seconds per day
@@ -1481,7 +1425,7 @@ C
 
       IF ( Mft_to_days>1.0 ) PRINT *, 'CAUTION, MF time step /= 1 day'
 
-      IF ( Model>GSFLOW ) PRINT *, ' '
+      IF ( Model==MODFLOW ) PRINT *, ' '
       TOTIM = 0.0
       KPER = 0
       KSTP = 0
@@ -1818,7 +1762,7 @@ C
      &    GSFLOW_flag
       USE GLOBAL, ONLY: ITMUNI, LENUNI, IOUT
       USE GWFBASMODULE, ONLY: DELT
-      USE GSFMODFLOW, ONLY: Mft_to_sec, Cellarea,
+      USE GSFMODFLOW, ONLY: Mft_to_sec, Cellarea, MFQ_to_inch_acres,
      &    Mfl2_to_acre, Mfl3_to_ft3, Mfl_to_inch, Sfr_conv,
      &    Acre_inches_to_mfl3, Inch_to_mfl_t, Mfl3t_to_cfs,
      &    Mfvol2inch_conv, Gvr2cell_conv, Mfq2inch_conv
@@ -1858,6 +1802,7 @@ C
       Mfl_to_inch = 1.0/inch_to_mfl
       Mfl2_to_acre = Mfl2_to_acre/FT2_PER_ACRE
       Inch_to_mfl_t = inch_to_mfl/DELT  ! will need to move if DELT allowed to change
+      MFQ_to_inch_acres = SNGL( DELT*Mfl2_to_acre*Mfl_to_inch )
 
       Sfr_conv = Mft_to_sec/Mfl3_to_ft3
       Mfl3t_to_cfs = Mfl3_to_ft3/Mft_to_sec
