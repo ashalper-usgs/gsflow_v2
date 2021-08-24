@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.com/rniswon/gsflow_v2.svg?token=JQ4RYmycyrTBEPDUKxGA&branch=master)](https://travis-ci.com/rniswon/gsflow_v2)
-
 # GSFLOW: Coupled Groundwater and Surface-Water Flow Model
 
 GSFLOW is a coupled Groundwater and Surface-water FLOW model based on the 
@@ -26,7 +24,6 @@ climate variability, and groundwater withdrawals on surface and subsurface flow
 for watersheds that range from a few square kilometers to several thousand 
 square kilometers, and for time periods that range from months to several 
 decades.
-
 
 <p align="center">
   <img src="https://prd-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/styles/full_width/public/thumbnails/image/gsflow.jpg" alt="Sagehen_GSFLOW"/>
