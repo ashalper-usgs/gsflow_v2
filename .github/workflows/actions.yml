@@ -5,9 +5,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: ./setup.sh
+      - run: echo "run setup"
   build:
     needs: setup
     runs-on: ubuntu-latest
     steps:
-      - run: ./build.sh
+      - run: echo "run build"
