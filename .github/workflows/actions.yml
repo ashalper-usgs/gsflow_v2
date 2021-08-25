@@ -32,13 +32,10 @@ jobs:
         with:
           path: |-
             $HOME/.cache/pip
-            $HOME/.local
           key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
       - uses: actions/checkout@v2
       - run: ls -l /usr/bin/gfortran-8
-      - run: ln -fs /usr/bin/gcc-8 "$HOME/.local/bin/gcc" && gcc --version
       - run: ls -l /usr/bin/gcc-8
-      - run: ln -fs /usr/bin/g++-8 "$HOME/.local/bin/g++" && g++ --version
       - run: ls -l /usr/bin/g++-8
       - run: export CXX="g++"
       - run: pip install -r requirements.travis.txt
