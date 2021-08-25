@@ -69,8 +69,5 @@ jobs:
       - run: echo nosetests version; nosetests --version
       - run: >-
           cd autotest;
-          sh make_linux_gfortran.sh;
-          cd ..
-      # TODO: needs to be adapted for GitHub actions
-      - run: travis_wait 90 nosetests -v --with-id --with-timer -w ./autotest
-      - run: cd autotest
+          sh make_linux_gfortran.sh
+      - run: 'nosetests -v --with-id --with-timer -w ./autotest'
