@@ -34,8 +34,10 @@ jobs:
             $HOME/.cache/pip
           key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
       - uses: actions/checkout@v2
-      	  with:
-	     path: '.'
+        with:
+          # Repository name with owner. For example, actions/checkout
+          # Default: ${{ github.repository }}
+          repository: '.'
       - run: ls -l /usr/bin/gfortran-8
       - run: ls -l /usr/bin/gcc-8
       - run: ls -l /usr/bin/g++-8
