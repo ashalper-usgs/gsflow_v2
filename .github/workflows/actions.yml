@@ -65,6 +65,7 @@ jobs:
       - run: echo pyshp; python -c "import shapefile; print(shapefile.__version__)"
       - run: echo nosetests version; nosetests --version
       - run: cd autotest
+      - run: pwd; ls -a
       - run: chmod u+x make_linux_gfortran.sh
       - run: sed -i -e 's/\r$//' make_linux_gfortran.sh
       - run: ./make_linux_gfortran.sh
