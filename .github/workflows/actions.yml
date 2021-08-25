@@ -41,7 +41,7 @@ jobs:
       - run: ls -l /usr/bin/gcc-8
       - run: ls -l /usr/bin/g++-8
       - run: export CXX="g++"
-      - run: pip install -r requirements.travis.txt
+      - run: pip install -r requirements.txt
       - run: pip install --upgrade numpy
       - run: pip install requests
       - run: 'pip install https://github.com/modflowpy/pymake/zipball/master'
@@ -67,9 +67,10 @@ jobs:
           print(pd.__version__)"
       - run: echo pyshp; python -c "import shapefile; print(shapefile.__version__)"
       - run: echo nosetests version; nosetests --version
-      - run: cd autotest && sh make_linux_gfortran.sh
-      - run: sed -i -e 's/\r$//' make_linux_gfortran.sh
-      - run: ./make_linux_gfortran.sh
-      - run: cd ..
+      - run: >-
+          cd autotest
+	  sh make_linux_gfortran.sh
+          cd ..
+      # TODO: needs to be adapted for GitHub actions
       - run: travis_wait 90 nosetests -v --with-id --with-timer -w ./autotest
       - run: cd autotest
