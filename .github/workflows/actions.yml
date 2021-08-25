@@ -34,6 +34,8 @@ jobs:
             $HOME/.cache/pip
           key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
       - uses: actions/checkout@v2
+      	  with:
+	     path: '.'
       - run: ls -l /usr/bin/gfortran-8
       - run: ls -l /usr/bin/gcc-8
       - run: ls -l /usr/bin/g++-8
