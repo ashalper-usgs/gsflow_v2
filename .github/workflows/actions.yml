@@ -35,11 +35,6 @@ jobs:
             $HOME/.local
           key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
       - uses: actions/checkout@v2
-      - run: 'if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi'
-      - run: 'export PATH="$HOME/.local/bin:$PATH"'
-      - run: >-
-          ln -fs /usr/bin/gfortran-8 "$HOME/.local/bin/gfortran" && gfortran
-          --version
       - run: ls -l /usr/bin/gfortran-8
       - run: ln -fs /usr/bin/gcc-8 "$HOME/.local/bin/gcc" && gcc --version
       - run: ls -l /usr/bin/gcc-8
