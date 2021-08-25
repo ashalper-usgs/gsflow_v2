@@ -1,13 +1,81 @@
 name: actions
-on: [push]
+'on':
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - run: echo "run setup"
   build:
-    needs: setup
-    runs-on: ubuntu-latest
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - ubuntu-18.04
+        python-version:
+          - '3.8'
     steps:
-      - run: echo "run build"
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update
+
+          sudo apt-get install -y g++-8 gdal-bin gfortran-8 libgdal-dev
+          libhdf5-serial-dev libnetcdf-dev netcdf-bin python-pip
+      - name: 'Set up Python ${{ matrix.python-version }}'
+        uses: actions/setup-python@v2
+        with:
+          python-version: '${{ matrix.python-version }}'
+      - name: Cache multiple paths
+        uses: actions/cache@v2
+        with:
+          path: |-
+            $HOME/.cache/pip
+            $HOME/.local
+          key: '${{ runner.os }}-${{ hashFiles(''TODO'') }}'
+      - uses: actions/checkout@v2
+      - run: 'if [[ ! -d "$HOME/.local/bin" ]]; then mkdir "$HOME/.local/bin"; fi'
+      - run: 'export PATH="$HOME/.local/bin:$PATH"'
+      - run: >-
+          ln -fs /usr/bin/gfortran-8 "$HOME/.local/bin/gfortran" && gfortran
+          --version
+      - run: ls -l /usr/bin/gfortran-8
+      - run: ln -fs /usr/bin/gcc-8 "$HOME/.local/bin/gcc" && gcc --version
+      - run: ls -l /usr/bin/gcc-8
+      - run: ln -fs /usr/bin/g++-8 "$HOME/.local/bin/g++" && g++ --version
+      - run: ls -l /usr/bin/g++-8
+      - run: export CXX="g++"
+      - run: pip install -r requirements.travis.txt
+      - run: pip install --upgrade numpy
+      - run: pip install requests
+      - run: 'pip install https://github.com/modflowpy/pymake/zipball/master'
+      - run: 'pip install shapely[vectorize]'
+      - run: pip install nose-timer
+      - run: 'pip install https://github.com/modflowpy/flopy/zipball/develop'
+      - run: 'pip install https://github.com/pygsflow/pygsflow/zipball/master'
+      - run: 'export PYTHONPATH=$PYTHONPATH:.'
+      - run: >-
+          echo python path; python -c "from __future__ import print_function;
+          import sys; print(sys.path)"
+      - run: >-
+          python -c "import os; is_travis = 'TRAVIS' in os.environ;
+          print('TRAVIS {}'.format(is_travis))"
+      - run: >-
+          echo flopy version; python -c "from __future__ import print_function;
+          import flopy; print(flopy.__version__)"
+      - run: >-
+          echo numpy version; python -c "import numpy;
+          print(numpy.version.version)"
+      - run: >-
+          echo pandas version; python -c "import pandas as pd;
+          print(pd.__version__)"
+      - run: echo pyshp; python -c "import shapefile; print(shapefile.__version__)"
+      - run: echo nosetests version; nosetests --version
+      - run: cd autotest
+      - run: chmod u+x make_linux_gfortran.sh
+      - run: sed -i -e 's/\r$//' make_linux_gfortran.sh
+      - run: ./make_linux_gfortran.sh
+      - run: cd ..
+      - run: travis_wait 90 nosetests -v --with-id --with-timer -w ./autotest
+      - run: cd autotest
