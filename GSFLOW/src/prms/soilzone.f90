@@ -18,7 +18,7 @@
 !   Local Variables
       character(len=*), parameter :: MODDESC = 'Soilzone Computations'
       character(len=8), parameter :: MODNAME = 'soilzone'
-      character(len=*), parameter :: Version_soilzone = '2021-08-18'
+      character(len=*), parameter :: Version_soilzone = '2021-09-08'
       INTEGER, SAVE :: DBGUNT
       INTEGER, SAVE :: Max_gvrs, Et_type, Pref_flag
       REAL, SAVE, ALLOCATABLE :: Gvr2pfr(:), Swale_limit(:)
@@ -29,12 +29,13 @@
 !   GSFLOW variables
       INTEGER, SAVE, ALLOCATABLE :: Hru_gvr_count(:), Hru_gvr_index(:, :), Hrucheck(:)
       REAL, SAVE, ALLOCATABLE :: Replenish_frac(:)
+      REAL, SAVE :: It0_basin_soil_moist, It0_basin_ssstor
       REAL, SAVE, ALLOCATABLE :: It0_soil_rechr(:), It0_soil_moist(:)
       REAL, SAVE, ALLOCATABLE :: It0_pref_flow_stor(:), It0_ssres_stor(:)
       REAL, SAVE, ALLOCATABLE :: It0_gravity_stor_res(:), It0_sroff(:)
       REAL, SAVE, ALLOCATABLE :: It0_slow_stor(:), It0_potet(:)
       DOUBLE PRECISION, SAVE, ALLOCATABLE :: It0_strm_seg_in(:)
-      DOUBLE PRECISION, SAVE :: It0_basin_soil_moist, It0_basin_ssstor, Basin_sz_gwin
+      DOUBLE PRECISION, SAVE :: Basin_sz_gwin
       DOUBLE PRECISION, SAVE, ALLOCATABLE :: Gvr_hru_pct_adjusted(:)
 !   Declared Variables
       DOUBLE PRECISION, SAVE :: Basin_sz2gw, Basin_cap_infil_tot
@@ -253,7 +254,7 @@
      &     'inches', Basin_sz2gw)/=0 ) CALL read_error(3, 'basin_sz2gw')
 
       ALLOCATE ( Pref_flow_in(Nhru) )
-      IF ( declvar('soilzone', 'pref_flow_in', 'nhru', Nhru, 'real', &
+      IF ( declvar(MODNAME, 'pref_flow_in', 'nhru', Nhru, 'real', &
      &     'Infiltration and flow from gravity reservoir to the preferential-flow reservoir', &
      &     'inches', Pref_flow_in)/=0 ) CALL read_error(3, 'pref_flow_in')
 
@@ -956,6 +957,7 @@
       Soil_saturated = OFF
       update_potet = OFF
       IF ( Soilzone_add_water_use==ACTIVE ) Soilzone_gain_hru = 0.0
+
       DO k = 1, Active_hrus
         i = Hru_route_order(k)
 
@@ -1021,7 +1023,7 @@
         ag_water_maxin = 0.0
         IF ( Ag_package==ACTIVE ) THEN
           IF ( Hru_ag_irr(i)>0.0 ) THEN
-            ag_water_maxin = Hru_ag_irr(i)/perv_area ! Hru_ag_irr is in inches
+            ag_water_maxin = Hru_ag_irr(i)/perv_area ! Hru_ag_irr is in acre-inches
           ENDIF
         ENDIF
         IF ( Soilzone_add_water_use==ACTIVE ) THEN
@@ -1049,6 +1051,7 @@
         ! pref_flow for whole HRU
 ! ??? should cascading flow go to preferential flow fraction ???
         prefflow = 0.0
+        dunnianflw_pfr = 0.0
         IF ( Pref_flow_den(i)>0.0 ) THEN
           pref_flow_maxin = 0.0
           Pref_flow_infil(i) = 0.0
@@ -1403,7 +1406,7 @@
      &           Soil_rechr, Soil_to_gw, Perv_frac)
       IMPLICIT NONE
 ! Function
-      INTRINSIC :: MIN, ABS
+      INTRINSIC :: MIN
 ! Arguments
       REAL, INTENT(IN) :: Perv_frac, Soil_moist_max, Soil_rechr_max, Soil2gw_max
       REAL, INTENT(INOUT) :: Infil, Soil_moist, Soil_rechr, Soil_to_gw, Soil_to_ssr

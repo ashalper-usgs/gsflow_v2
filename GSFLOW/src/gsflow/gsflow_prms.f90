@@ -20,10 +20,10 @@
      &          EQULS = '===================================================================='
       character(len=*), parameter :: MODDESC = 'PRMS Computation Order'
       character(len=11), parameter :: MODNAME = 'gsflow_prms'
-      character(len=*), parameter :: GSFLOW_versn = '2.2.1 08/26/2021'
-      character(len=*), parameter :: PRMS_versn = '2021-08-26'
-      character(len=*), parameter :: PRMS_VERSION = 'Version 5.2.1 08/26/2021'
-      CHARACTER(LEN=8), SAVE :: Process
+      character(len=*), parameter :: GSFLOW_versn = '2.2.1 09/07/2021'
+      character(len=*), parameter :: PRMS_versn = '2021-09-07'
+      character(len=*), parameter :: PRMS_VERSION = 'Version 5.2.1 09/07/2021'
+      CHARACTER(len=8), SAVE :: Process
 ! Dimensions
       INTEGER, SAVE :: Nratetbl, Nwateruse, Nexternal, Nconsumed, Npoigages, Ncascade, Ncascdgw
       INTEGER, SAVE :: Nhru, Nssr, Ngw, Nsub, Nhrucell, Nlake, Ngwcell, Nlake_hrus, NLAKES_MF, Nreach
@@ -67,7 +67,7 @@
       INTEGER, SAVE :: Prms_warmup, PRMS_land_iteration_flag
       INTEGER, SAVE :: Snow_cbh_flag, Gwflow_cbh_flag, Frozen_flag, Glacier_flag
       INTEGER, SAVE :: Dprst_add_water_use, Dprst_transfer_water_use
-      INTEGER, SAVE :: Snarea_curve_flag, Soilzone_aet_flag, outputSelectDatesON_OFF
+      INTEGER, SAVE :: Snarea_curve_flag, Soilzone_aet_flag, outputSelectDatesON_OFF, snow_cloudcover_flag
       CHARACTER(LEN=MAXFILE_LENGTH), SAVE :: Gsflow_output_file, selectDatesFileName, Dynamic_param_log_file
       CHARACTER(LEN=MAXFILE_LENGTH), SAVE :: Model_output_file, Var_init_file, Var_save_file
       CHARACTER(LEN=MAXFILE_LENGTH), SAVE :: Csv_output_file, Model_control_file, Param_file
@@ -184,7 +184,8 @@
      &         'Current iteration in GSFLOW simulation', 'none', KKITER)/=0 ) CALL read_error(3, 'KKITER')
           ALLOCATE ( Hru_ag_irr(Nhru) )
           IF ( declvar(MODNAME, 'hru_ag_irr', 'nhru', Nhru, 'real', &
-     &         'Irrigation added to soilzone from MODFLOW wells', 'inches', Hru_ag_irr)/=0 ) CALL read_error(3, 'hru_ag_irr')
+     &         'Irrigation added to soilzone from MODFLOW wells', &
+     &         'acre-inches', Hru_ag_irr)/=0 ) CALL read_error(3, 'hru_ag_irr')
           Hru_ag_irr = 0.0
           IF ( declparam(MODNAME, 'mxsziter', 'one', 'integer', &
      &         '0', '0', '5000', &
@@ -238,6 +239,7 @@
               CALL error_stop('gvr_cell_id must be specified', ERROR_param)
             ENDIF
           ENDIF
+
           ierr = gsflow_modflow()
           IF ( ierr/=0 ) CALL module_error(MODNAME, Arg, ierr)
           IF ( Have_lakes==ACTIVE .AND. Nlake/=NLAKES_MF ) THEN
@@ -308,7 +310,7 @@
         IF ( Process_flag==SETDIMENS .OR. Process_flag==DECL ) THEN
           Init_vars_from_file = 0 ! make sure this is set so all variables and parameters are declared
           CALL module_doc()
-          call_modules = ierr
+          IF ( ierr/=0 ) CALL module_error('DOCUMENTATION', Arg, ierr)
           RETURN
         ELSE
           STOP
@@ -381,7 +383,7 @@
       ENDIF
 
       IF ( Model==CLIMATE ) THEN
-        call_modules = ierr
+        IF ( ierr/=0 ) CALL module_error('CLIMATE', Arg, ierr)
         IF ( Process_flag==RUN ) THEN
           CALL summary_output()
           RETURN
@@ -451,7 +453,7 @@
       ENDIF
 
       IF ( Model==POTET ) THEN
-        call_modules = ierr
+        IF ( ierr/=0 ) CALL module_error('POTET', Arg, ierr)
         IF ( Process_flag==RUN ) THEN
           CALL summary_output()
           RETURN
@@ -760,7 +762,7 @@
         ELSE
           Process_flag = RUN
           DO WHILE ( Kper_mfo<=Nper )
-            IF ( mf_nowtime>endday ) EXIT
+            !IF ( mf_nowtime>endday ) EXIT
             test = gsflow_modflow()
             IF ( test/=0 ) CALL module_error(MODNAME, 'run', test)
             IF ( mf_timestep==NSTP(Kper_mfo) ) THEN
@@ -908,6 +910,7 @@
 
       IF ( control_integer(Snarea_curve_flag, 'snarea_curve_flag')/=0 ) Snarea_curve_flag = OFF
       IF ( control_integer(Soilzone_aet_flag, 'soilzone_aet_flag')/=0 ) Soilzone_aet_flag = OFF
+      IF ( control_integer(snow_cloudcover_flag, 'snow_cloudcover_flag')/=0 ) snow_cloudcover_flag = OFF
 
       IF ( control_integer(Humidity_cbh_flag, 'humidity_cbh_flag')/=0 ) Humidity_cbh_flag = OFF
       IF ( control_integer(Windspeed_cbh_flag, 'windspeed_cbh_flag')/=0 ) Windspeed_cbh_flag = OFF

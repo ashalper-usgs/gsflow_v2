@@ -7,7 +7,7 @@
 !   Local Variables
       character(len=*), parameter :: MODDESC = 'GSFLOW MODFLOW main'
       character(len=14), parameter :: MODNAME = 'gsflow_modflow'
-      character(len=*), parameter :: Version_gsflow_modflow='2021-08-26'
+      character(len=*), parameter :: Version_gsflow_modflow='2021-09-08'
       character(len=*), parameter :: MODDESC_UZF = 'UZF-NWT Package'
       character(len=*), parameter :: MODDESC_SFR = 'SFR-NWT Package'
       character(len=*), parameter :: MODDESC_LAK = 'LAK-NWT Package'
@@ -138,6 +138,7 @@ C1------USE package modules.
       USE GLOBAL
       USE GWFBASMODULE
       USE GWFLAKMODULE, ONLY: NLAKES
+      USE GWFUZFMODULE, ONLY: IGSFLOW
       IMPLICIT NONE
       INTEGER :: I
       INCLUDE 'openspec.inc'
@@ -427,6 +428,7 @@ C7------SIMULATE EACH STRESS PERIOD.
       Iter_cnt = 0
       CALL SETMFTIME()
       IF ( GSFLOW_flag==ACTIVE ) THEN
+        IF(IUNIT(55).GT.0) IGSFLOW = 1
         CALL set_cell_values()
         IF ( Init_vars_from_file>OFF )
      &       CALL gsflow_modflow_restart(READ_INIT)
@@ -451,11 +453,11 @@ C
       KSTP = 0
       KPER = 1
       KPERSTART = 1
-      Delt_save = DELT
-      IF ( ISSFLG(1).EQ.1 ) DELT = 1.0/Mft_to_days
       ! run SS if needed, read to current stress period, read restart if needed
-      CALL SETCONVFACTORS()
       CALL SET_STRESS_DATES()
+      Delt_save = DELT
+      IF ( ISSFLG(1).EQ.0 ) Delt_save = 1.0/Mft_to_days
+      CALL SETCONVFACTORS()
 C
       KKPER = KPER
       IF ( Model==MODFLOW ) THEN
@@ -531,7 +533,7 @@ C7------SIMULATE EACH STRESS PERIOD.
           IF ( ISSFLG(KKPER).EQ.1 ) CALL error_stop
      &         ('cannot run steady state after first stress period.',
      &          ERROR_modflow)
-          IF ( ISSFLG(1).EQ.1 ) Delt_save = DELT
+          IF ( ISSFLG(1).EQ.0 ) Delt_save = DELT
           IF ( DELT.NE.Delt_save )
      &         CALL error_stop('cannot change DELT', ERROR_time)
         END IF
@@ -712,14 +714,14 @@ C7C2A---FORMULATE THE FINITE DIFFERENCE EQUATIONS.
             ENDIF
             IF(IUNIT(66).GT.0 ) 
      1         CALL GWF2AG7FM(Kkper, Kkstp, Kkiter,IUNIT(63),AGCONVERGE)
+            IF(IUNIT(22).GT.0) CALL GWF2LAK7FM(KKITER,KKPER,KKSTP,
+     1                                     IUNIT(44),IUNIT(55),IGRID)  !RGN 9/21/2021 to keep seepage from lake in UZF
             IF(IUNIT(55).GT.0) CALL GWF2UZF1FM(KKPER,KKSTP,KKITER,
      1                           IUNIT(44),IUNIT(22),IUNIT(63),
      2                           IUNIT(64),IGRID)  !SWR - JDH ADDED IUNIT(64)
             IF(IUNIT(44).GT.0) CALL GWF2SFR7FM(KKITER,KKPER,KKSTP,
      1                              IUNIT(22),IUNIT(63),IUNIT(8), 
      2                              IUNIT(55),IGRID)   !cjm (added IUNIT(8))
-            IF(IUNIT(22).GT.0) CALL GWF2LAK7FM(KKITER,KKPER,KKSTP,
-     1                                     IUNIT(44),IUNIT(55),IGRID)
             IF(IUNIT(50).GT.0) THEN
               IF (IUNIT(1).GT.0) THEN
                 CALL GWF2MNW27BCF(KPER,IGRID)

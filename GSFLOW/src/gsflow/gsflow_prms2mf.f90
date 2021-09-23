@@ -501,7 +501,7 @@
 ! Bin precolation in cell_drain_rate
 !-----------------------------------------------------------------------
 ! Set flag for UZF when PRMS sets FINF
-      IGSFLOW = 1
+!      IGSFLOW = 1 this needs to be done in init
       Net_sz2gw = 0.0D0
       Excess = 0.0
       FINF = 0.0
