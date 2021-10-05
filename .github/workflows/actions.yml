@@ -56,9 +56,6 @@ jobs:
       # /home/runner/work/gsflow_v2/gsflow_v2; it would be nice to
       # eliminate the redundant subdirectory in the path suffix.
       - uses: actions/checkout@v2
-      - run: ls -l /usr/bin/gfortran-8
-      - run: ls -l /usr/bin/gcc-8
-      - run: ls -l /usr/bin/g++-8
       - run: export CXX="g++"
       - run: pip install -r requirements.txt
       - run: pip install --upgrade numpy
