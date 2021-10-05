@@ -1510,7 +1510,7 @@
       ! SPECIFICATIONS:
       ! - -----------------------------------------------------------------
       USE GWFAGMODULE
-      USE GWFSFRMODULE, ONLY: SGOTFLW, SEG
+      USE GWFSFRMODULE, ONLY: SEG !, SGOTFLW
       USE PRMS_MODULE, ONLY: GSFLOW_flag
       USE GLOBAL, ONLY: IUNIT
       USE GWFBASMODULE, ONLY: TOTIM
@@ -2226,8 +2226,8 @@
         write (iout, 7) NUMGW + NUMGWALL
         write (iout, 8) NUMSWET
         write (iout, 9) NUMGWET + NUMGWETALL        
-        write (iout, 10) NUMPONDET + NUMPONDETALL
-        write (iout, 11) NUMPOND + NUMPONDALL
+!        write (iout, 10) NUMPONDET + NUMPONDETALL
+!        write (iout, 11) NUMPOND + NUMPONDALL
       ELSE
         BACKSPACE(IN)
       END IF
@@ -3127,8 +3127,8 @@
         !
       if(iseg==9.and.kper==8.and.kstp==1)then
 !      etdif = pettotal - aettotal
-          write(999,33)kper,kstp,kiter,SEG(2, iseg),
-     +                 SUPACT(iseg),pettotal,aettotal,demand(ISEG),etdif
+!          write(999,33)kper,kstp,kiter,SEG(2, iseg),
+!     +                 SUPACT(iseg),pettotal,aettotal,demand(ISEG),etdif
         endif
   33  format(3i5,6e20.10)
         IF (SEG(2, iseg) > demand(ISEG)) SEG(2, iseg) = demand(ISEG)
@@ -3154,6 +3154,7 @@
       USE PRMS_CLIMATEVARS, ONLY: POTET
       USE GSFMODFLOW, ONLY: Mfl2_to_acre, Mfl_to_inch, Gwc_col, Gwc_row
       USE GWFUZFMODULE, ONLY: UZFETOUT, GWET
+      USE GLOBAL, ONLY: ISSFLG
       IMPLICIT NONE
 ! --------------------------------------------------
       !modules
@@ -3166,11 +3167,13 @@
      +                    aetold, supold, sup
       integer :: k, iseg, hru_id, i, icell, irow, icol
       external :: set_factor
-      double precision :: set_factor, etdif
+      double precision :: set_factor !, etdif
       INTRINSIC :: ABS
 ! --------------------------------------------------
 !
-      prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+      prms_inch2mf_q = DZERO
+      if ( ISSFLG(kper) == 0 ) 
+     +     prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
       !
       !1 - -----loop over diversion segments that supply irrigation
       !
@@ -3253,6 +3256,7 @@
       USE GSFMODFLOW, ONLY: Mfl2_to_acre, Mfl_to_inch,
      +                      MFQ_to_inch_acres
       USE PRMS_FLOWVARS, ONLY: Dprst_vol_open
+      USE GLOBAL, ONLY: ISSFLG
       IMPLICIT NONE
 ! --------------------------------------------------
       !modules
@@ -3262,7 +3266,7 @@
       !dummy
       DOUBLE PRECISION :: factor, area, aet, pet
       double precision :: pettotal,aettotal, prms_inch2mf_q,
-     +                    aetold, supold, sup, etdif
+     +                    aetold, supold, sup !, etdif
       real :: demand_inch_acres
       integer :: k, ipond, hru_id, i
       external :: set_factor
@@ -3280,7 +3284,9 @@
       !
       !1 - -----loop over HRUs with ponds that supply irrigation
       !
-      prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+      prms_inch2mf_q = DZERO
+      if ( ISSFLG(kper) == 0 ) 
+     +     prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
       do 300 i = 1, NUMIRRPOND
         pettotal = DZERO
         aettotal = DZERO
@@ -3349,7 +3355,7 @@
 !     demandtrigger_sw---- triggers and sets sw irrigation demand
 !     ******************************************************************
 !     SPECIFICATIONS:
-      USE GLOBAL, ONLY: DELR, DELC
+      USE GLOBAL, ONLY: DELR, DELC, ISSFLG
       USE GWFSFRMODULE, ONLY: SEG, NSS !, STRM, DVRSFLW
       USE GWFAGMODULE
       USE GWFUZFMODULE, ONLY: GWET, UZFETOUT, PETRATE
@@ -3378,7 +3384,9 @@
       allocate (petseg(NSS), aetseg(NSS))
       aetseg = dzero
       petseg = dzero
-      prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+      prms_inch2mf_q = DZERO
+      if ( ISSFLG(kper) == 0 ) 
+     +     prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
       !
       !1 - -----loop over diversion segments that supply irrigation
       !
@@ -3441,13 +3449,13 @@
 !     ******************************************************************
 !     SPECIFICATIONS:
       !modules
-      USE GLOBAL, ONLY: DELR, DELC
+      USE GLOBAL, ONLY: DELR, DELC, ISSFLG
       USE GWFAGMODULE
       USE GWFUZFMODULE, ONLY: GWET, UZFETOUT, PETRATE
       USE GWFBASMODULE, ONLY: DELT
       USE PRMS_BASIN, ONLY: HRU_PERV !(delete this)
       !USE PRMS_BASIN, ONLY: Ag_area !(uncomment this)
-      !USE PRMS_SOILZONE, ONLY: ag_actet !(uncomment this)
+      !USE PRMS_SOILZONE_AG, ONLY: ag_actet !(uncomment this)
       USE PRMS_SOILZONE, ONLY: PERV_ACTET !(delete this)
       USE PRMS_CLIMATEVARS, ONLY: POTET
       USE PRMS_MODULE, ONLY: GSFLOW_flag, Nhru, Nhrucell, Gvr_cell_id
@@ -3469,7 +3477,9 @@
       pettotal = dzero
       aettotal = dzero
       aet = dzero
-      prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+      prms_inch2mf_q = DZERO
+      if ( ISSFLG(kper) == 0 ) 
+     +     prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
       DO i = 1, NUMCELLS(L)
          if (GSFLOW_flag == 0) THEN
             ic = IRRCOL_GW(i, l)
@@ -3588,6 +3598,7 @@
       USE PRMS_CLIMATEVARS, ONLY: POTET
       USE PRMS_MODULE, ONLY: Nhru, Nhrucell, Gvr_cell_id
       USE GSFMODFLOW, ONLY: Mfl2_to_acre, Mfl_to_inch, Gwc_col, Gwc_row
+      USE GLOBAL, ONLY: ISSFLG
       IMPLICIT NONE
 ! --------------------------------------
       !modules
@@ -3605,7 +3616,9 @@
       demandgw_prms = DZERO
       pettotal = DZERO
       aettotal = DZERO
-      prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+      prms_inch2mf_q = DZERO
+      if ( ISSFLG(kper) == 0 ) 
+     +     prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
       DO I = 1, NUMCELLS(L)
          hru_id = IRRROW_GW(I, L)
          !area = Ag_area(hru_id) !(uncomment this)
@@ -3687,7 +3700,7 @@
       USE GWFUZFMODULE, ONLY: GWET, UZFETOUT, PETRATE
       USE GWFSFRMODULE, ONLY: DVRSFLW, SGOTFLW
       USE GWFAGMODULE
-      USE GLOBAL, ONLY: DELR, DELC
+      USE GLOBAL, ONLY: DELR, DELC, ISSFLG
       USE GWFBASMODULE, ONLY: DELT
       USE PRMS_BASIN, ONLY: HRU_PERV !(delete this)
       !USE PRMS_BASIN, ONLY: Ag_area !(uncomment this)
@@ -3750,7 +3763,7 @@
                 Q = PONDSEGFLOW(I)
                 QQ = PONDFLOW(I)
                 QQQ = 0.0
-!                if ( Agriculture_dprst_flag == 1 )   !uncommment this and next 2 lines
+!                if ( Agriculture_dprst_flag == 1 )   !uncommment this and next line
 !     +               QQQ = Dprst_vol_open(hru_id)/MFQ_to_inch_acres
                 CALL timeseries(unit, Kkper, Kkstp, TOTIM, hru_id,
      +                          Q, QQ, QQQ)
@@ -3831,7 +3844,8 @@
       QQ = DZERO
       QQQ = DZERO
       if (TSACTIVESWET) then
-         prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+      if ( ISSFLG(kkper) == 0 ) 
+     +     prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
          do I = 1, NUMSWET
             aettot = DZERO
             pettot = DZERO
@@ -3904,7 +3918,8 @@
          aettot = DZERO
          pettot = DZERO
          IF (TSACTIVEGWET) THEN
-            prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+            if ( ISSFLG(kkper) == 0 ) 
+     +           prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
             DO I = 1, NUMGWET
                pettot = DZERO
                aettot = DZERO
@@ -3962,7 +3977,8 @@
       aettot = DZERO
       pettot = DZERO
       IF (TSGWETALLUNIT > 0) THEN
-         prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
+        if ( ISSFLG(kkper) == 0 ) 
+     +    prms_inch2mf_q = done/(DELT*Mfl2_to_acre*Mfl_to_inch)
          DO L = 1, NWELLS
             UNIT = TSGWETALLUNIT
             do J = 1, NUMCELLS(L)
