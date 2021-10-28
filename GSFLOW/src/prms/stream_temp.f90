@@ -6,7 +6,7 @@
 !   Local Variables
       character(len=*), parameter :: MODDESC = 'Stream Temperature'
       character(len=11), parameter :: MODNAME = 'stream_temp'
-      character(len=*), parameter :: Version_stream_temp = '2021-08-13'
+      character(len=*), parameter :: Version_stream_temp = '2021-09-07'
       INTEGER, SAVE, ALLOCATABLE :: Seg_hru_count(:), Seg_close(:)
       REAL, SAVE, ALLOCATABLE ::  seg_tave_ss(:), Seg_carea_inv(:), seg_tave_sroff(:), seg_tave_lat(:)
       REAL, SAVE, ALLOCATABLE :: seg_tave_gw(:), Flowsum(:)
@@ -205,7 +205,7 @@
 
       ALLOCATE ( Seg_length(Nsegment) )
       IF ( declparam( MODNAME, 'seg_length', 'nsegment', 'real', &
-     &     '1000.0', '1.0', '100000.0', &
+     &     '1000.0', '0.001', '200000.0', &
      &     'Length of each segment', &
      &     'Length of each segment', &
      &     'meters')/=0 ) CALL read_error(1, 'seg_length')
@@ -990,6 +990,8 @@
          CALL lat_inflow(qlat, seg_tave_lat(i), i, seg_tave_gw(i), Seg_tave_air(i), seg_tave_ss(i), &
      &                   Seg_melt(i), Seg_rain(i))
 
+! addition of lat_temp_adj moved up here before the ).0 degree cutoff.
+         seg_tave_lat(i) = seg_tave_lat(i) + lat_temp_adj(i,Nowmonth)
 
          ! This code does not handle thermodynamics of ice, so temperatures below 0 are not allowed.
          ! The question is when to set temperatures below 0 to 0. If, after computing the running averages
@@ -1013,12 +1015,13 @@
              ! If there is no flow, set the temperature to -98.9
              ! -99.9 means that the segment never has any flow (determined up in init).
              ! -98.9 means that this a segment that could have flow, but doesn't
-            Seg_tave_water(i) = -98.9
+            Seg_tave_water(i) = NOFLOW_TEMP
             t_o = Seg_tave_water(i)
 
          elseif (fs .le. NEARZERO) then
              ! if this is true, then there is no flow from upstream, but there is lateral inflow
-            t_o = seg_tave_lat(i) + lat_temp_adj(i,Nowmonth)
+!            t_o = seg_tave_lat(i) + lat_temp_adj(i,Nowmonth)
+            t_o = seg_tave_lat(i)
 
          elseif (qlat .le. NEARZERO) then
              ! if this is true, then there is no lateral flow, but there is flow from upstream
@@ -1027,8 +1030,11 @@
          else
              ! if this is true, then there is both lateral flow and flow from upstream
              !  qlat is in CMS so fs needs to be converted
+!            t_o = sngl((seg_tave_upstream(i) * fs * CFS2CMS_CONV) + &
+!     &                   (sngl(qlat) * (seg_tave_lat(i) + lat_temp_adj(i,Nowmonth)))) / &
+!     &                   sngl((fs * CFS2CMS_CONV) + sngl(qlat))
             t_o = sngl((seg_tave_upstream(i) * fs * CFS2CMS_CONV) + &
-     &                   (sngl(qlat) * (seg_tave_lat(i) + lat_temp_adj(i,Nowmonth)))) / &
+     &                   (sngl(qlat) * seg_tave_lat(i))) / &
      &                   sngl((fs * CFS2CMS_CONV) + sngl(qlat))
          endif
 
@@ -1078,7 +1084,7 @@
 ! Compute the flow-weighted average temperature and a total sum of lateral inflows
 !*********************************************************************************
       SUBROUTINE lat_inflow(Qlat, Tl_avg, id, tave_gw, tave_air, tave_ss, melt, rain)
-      USE PRMS_CONSTANTS, ONLY: CFS2CMS_CONV, NEARZERO
+      USE PRMS_CONSTANTS, ONLY: CFS2CMS_CONV
       USE PRMS_STRMTEMP, ONLY: Melt_temp
       USE PRMS_FLOWVARS, ONLY: Seg_lateral_inflow
       USE PRMS_ROUTING, ONLY: Seginc_sroff, Seginc_ssflow, Seginc_gwflow

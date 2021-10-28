@@ -424,7 +424,7 @@
      &       'cfs', Soilzone_gain_tot)/=0 ) CALL read_error(1, 'soilzone_gain_tot')
         ALLOCATE ( Soilzone_gain_hru(Nhru) )
         IF ( declvar(MODNAME, 'soilzone_gain_hru', 'nhru', Nhru, 'real', &
-     &       'Irrigation added to soilzone from water-use module for each HRU', &
+     &       'Irrigation added to soilzone as depth over each HRU', &
      &       'inches', Soilzone_gain_hru)/=0 ) CALL read_error(3, 'soilzone_gain_hru')
         IF ( declvar(MODNAME, 'total_soilzone_gain', 'one', 1, 'double', &
      &       'Transfer gains to all capillary reservoirs for each time step', &
@@ -456,6 +456,7 @@
         year = Start_year
         month = Start_month
         day = Start_day
+        ierr = 0
 
         CALL PRMS_open_module_file(Outunit, 'water_use.out')
         WRITE ( Outunit, 10 ) 'Simulation Start Date:', year, month, day, '   End Date:', &

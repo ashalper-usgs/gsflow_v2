@@ -1,3 +1,5 @@
+[![GSFLOW CI](https://github.com/rniswon/gsflow_v2/actions/workflows/ci.yml/badge.svg)](https://github.com/rniswon/gsflow_v2/actions/workflows/ci.yml)
+
 # GSFLOW: Coupled Groundwater and Surface-Water Flow Model
 
 GSFLOW is a coupled Groundwater and Surface-water FLOW model based on the 

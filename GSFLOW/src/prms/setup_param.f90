@@ -8,7 +8,8 @@
 !     Main setup routine
 !***********************************************************************
       INTEGER FUNCTION setup()
-      USE PRMS_MODULE, ONLY: Process_flag, DECL
+      USE PRMS_CONSTANTS, ONLY: DECL
+      USE PRMS_MODULE, ONLY: Process_flag
       IMPLICIT NONE
 ! Functions
       INTEGER, EXTERNAL :: setupdecl
@@ -28,7 +29,7 @@
       IMPLICIT NONE
       character(len=*), parameter :: MODDESC = 'Parameter Setup'
       character(len=*), parameter :: MODNAME = 'setup_param'
-      character(len=*), parameter :: Version_setup = '2020-08-03'
+      character(len=*), parameter :: Version_setup = '2021-09-07'
 ! Functions
       INTEGER, EXTERNAL :: declparam
       EXTERNAL :: read_error, print_module
@@ -70,7 +71,8 @@
       ! 8=split segment from NHMPlus flowline because of change in elevation > 500 meters)
       IF ( declparam(MODNAME, 'poi_type', 'npoigages', 'integer', &
      &     '1', '1', '1', &
-     &     'Type code for each POI gage', 'Type code for each POI gage', &
+     &     'Type code for each POI gage', &
+     &     'Type code for each POI gage (0=non-calibration gage, 1=calibration gage, 2=flow replacement gage)', &
      &     'none')/=0 ) CALL read_error(1, 'poi_type')
 
       IF ( declparam(MODNAME, 'parent_poigages', 'npoigages', 'integer', &
